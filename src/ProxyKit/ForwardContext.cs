@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
@@ -32,22 +33,22 @@ namespace ProxyKit
         /// </summary>
         public HttpRequestMessage UpstreamRequest { get; }
 
-        [Obsolete("Use Send() instead.", true)]
-        public Task<HttpResponseMessage> Execute() => Send();
-
         /// <summary>
         /// Sends the upstream request to the upstream host.
         /// </summary>
         /// <returns>An <see cref="HttpResponseMessage"/> the represents the proxy response.</returns>
-        public async Task<HttpResponseMessage> Send()
+        public async Task<HttpResponseMessage> Send(CancellationToken cancellationToken = default)
         {
+            using var linkedCts = 
+                CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted, cancellationToken);
+
             try
             {
                 return await _httpClient
                     .SendAsync(
                         UpstreamRequest,
                         HttpCompletionOption.ResponseHeadersRead,
-                        HttpContext.RequestAborted)
+                        linkedCts.Token)
                     .ConfigureAwait(false);
             }
             catch (TaskCanceledException ex) when (ex.InnerException is IOException)
@@ -57,13 +58,13 @@ namespace ProxyKit
             catch (OperationCanceledException)
             {
                 // Happens when Timeout is low and upstream host is not reachable.
-                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+                return new HttpResponseMessage(HttpStatusCode.BadGateway);
             }
             catch (HttpRequestException ex)
                 when (ex.InnerException is IOException || ex.InnerException is SocketException)
             {
                 // Happens when server is not reachable
-                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+                return new HttpResponseMessage(HttpStatusCode.BadGateway);
             }
         }
     }

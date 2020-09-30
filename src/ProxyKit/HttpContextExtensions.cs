@@ -1,7 +1,7 @@
 using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ProxyKit
@@ -12,22 +12,30 @@ namespace ProxyKit
         ///     Forward the request to the specified upstream host.
         /// </summary>
         /// <param name="context">The HttpContext</param>
-        /// <param name="upstreamHost">The upstream host to forward the requests
+        /// <param name="upstreamHost">The upstream host to forward the request
         /// to.</param>
         /// <returns>A <see cref="ForwardContext"/> that represents the
         /// forwarding request context.</returns>
         public static ForwardContext ForwardTo(this HttpContext context, UpstreamHost upstreamHost)
         {
-            var uri = new Uri(UriHelper.BuildAbsolute(
-                upstreamHost.Scheme,
-                upstreamHost.Host,
-                upstreamHost.PathBase,
-                context.Request.Path,
-                context.Request.QueryString));
+           var upstreamUri = upstreamHost
+               .BuildUpstreamUri(context.Request.Path, context.Request.QueryString);
+            return ForwardTo(context, upstreamUri);
+        }
 
+        /// <summary>
+        ///     Forward the request to the specified upstream host.
+        /// </summary>
+        /// <param name="context">The HttpContext</param>
+        /// <param name="upstreamUri">The upstream URI to forward the request
+        /// to.</param>
+        /// <returns>A <see cref="ForwardContext"/> that represents the
+        /// forwarding request context.</returns>
+        public static ForwardContext ForwardTo(this HttpContext context, Uri upstreamUri)
+        {
             var request = context.Request.CreateProxyHttpRequest();
-            request.Headers.Host = uri.Authority;
-            request.RequestUri = uri;
+            request.Headers.Host = upstreamUri.Authority;
+            request.RequestUri = upstreamUri;
 
             IHttpClientFactory httpClientFactory;
             try
@@ -51,9 +59,11 @@ namespace ProxyKit
         private static HttpRequestMessage CreateProxyHttpRequest(this HttpRequest request)
         {
             var requestMessage = new HttpRequestMessage();
-            
-            //Only copy Body when original request has a body.
-            if (request.ContentLength.HasValue)
+
+            // The presence of a message-body in a request is signaled by the
+            // inclusion of a Content-Length or Transfer-Encoding header field in
+            // the request's message-headers. https://tools.ietf.org/html/rfc2616 4.3 MessageBody
+            if (request.ContentLength > 0 || request.Headers.ContainsKey("Transfer-Encoding"))
             {
                 var streamContent = new StreamContent(request.Body);
                 requestMessage.Content = streamContent;

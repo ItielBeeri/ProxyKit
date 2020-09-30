@@ -13,7 +13,7 @@ namespace ProxyKit
             Action<IHttpClientBuilder> configureHttpClientBuilder = null,
             Action<ProxyOptions> configureOptions = null)
         {
-            if (services == null)
+            if (services is null)
             {
                 throw new ArgumentNullException(nameof(services));
             }
@@ -28,10 +28,11 @@ namespace ProxyKit
 
             configureHttpClientBuilder?.Invoke(httpClientBuilder);
 
-            configureOptions = configureOptions ?? (_ => { });
+            configureOptions ??= (_ => { });
             services
                 .Configure(configureOptions)
                 .AddOptions<ProxyOptions>();
+
             return services;
         }
     }

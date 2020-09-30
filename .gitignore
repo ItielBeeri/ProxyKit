@@ -18,3 +18,4 @@ bld/
 
 # Contents of artifacts directory
 artifacts/
+.vs/

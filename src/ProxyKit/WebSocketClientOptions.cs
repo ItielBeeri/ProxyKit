@@ -6,13 +6,11 @@ namespace ProxyKit
 {
     public class WebSocketClientOptions
     {
-        private readonly ClientWebSocketOptions _options;
-
         internal WebSocketClientOptions(
             ClientWebSocketOptions options,
             HttpContext httpContext)
         {
-            _options = options;
+            Options = options;
             HttpContext = httpContext;
         }
 
@@ -21,14 +19,16 @@ namespace ProxyKit
         /// </summary>
         public CookieContainer Cookies
         {
-            get => _options.Cookies;
-            set => _options.Cookies = value;
+            get => Options.Cookies;
+            set => Options.Cookies = value;
         }
 
         /// <summary>
         ///     The incoming HttpContext.
         /// </summary>
         public HttpContext HttpContext { get; }
+
+        public ClientWebSocketOptions Options { get; }
 
         /// <summary>
         ///     Set a header on the upstream websocket request.
@@ -37,7 +37,7 @@ namespace ProxyKit
         /// <param name="headerValue"></param>
         public void SetRequestHeader(string headerName, string headerValue)
         {
-            _options.SetRequestHeader(headerName, headerValue);
+            Options.SetRequestHeader(headerName, headerValue);
         }
     }
 }

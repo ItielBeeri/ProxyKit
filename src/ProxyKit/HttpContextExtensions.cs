@@ -14,9 +14,10 @@ namespace ProxyKit
         /// <param name="context">The HttpContext</param>
         /// <param name="upstreamHost">The upstream host to forward the requests
         /// to.</param>
+        /// <param name="httpClientName">The name used to get an <see cref="HttpClient"/> from <see cref="IHttpClientFactory"/>. If null, a default name is used.</param>
         /// <returns>A <see cref="ForwardContext"/> that represents the
         /// forwarding request context.</returns>
-        public static ForwardContext ForwardTo(this HttpContext context, UpstreamHost upstreamHost)
+        public static ForwardContext ForwardTo(this HttpContext context, UpstreamHost upstreamHost, string httpClientName = null)
         {
             var uri = new Uri(UriHelper.BuildAbsolute(
                 upstreamHost.Scheme,
@@ -43,7 +44,7 @@ namespace ProxyKit
                     exception);
             }
 
-            var httpClient = httpClientFactory.CreateClient(ServiceCollectionExtensions.ProxyKitHttpClientName);
+            var httpClient = httpClientFactory.CreateClient(httpClientName ?? ServiceCollectionExtensions.DefaultProxyKitHttpClientName);
 
             return new ForwardContext(context, request, httpClient);
         }
